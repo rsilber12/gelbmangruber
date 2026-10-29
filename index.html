@@ -89,8 +89,27 @@ main{max-width:480px;margin:0 auto;padding:32px 16px 72px}
   transition:transform .55s cubic-bezier(.2,.8,.2,1);
   will-change:transform;
 }
-.card img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
-.stage.instant .card,.stage.instant .env-part{transition:none!important}
+.card .art{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);aspect-ratio:var(--ar)}
+.card img{display:block;width:100%;height:100%;pointer-events:none;-webkit-user-drag:none}
+
+/* tappable date / address spots on the cards */
+.hot{
+  position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);
+  border-radius:8px;background:rgba(201,164,100,.07);box-shadow:inset 0 0 0 1px rgba(184,149,90,.22);
+  cursor:pointer;outline:none;transition:background .2s,opacity .4s;
+}
+.hot:hover,.hot:focus-visible{background:rgba(201,164,100,.16)}
+.hot i{
+  position:absolute;top:50%;width:26px;height:26px;margin-top:-13px;border-radius:50%;
+  background:var(--gold);color:#fff;display:grid;place-items:center;
+  box-shadow:0 3px 8px rgba(120,90,40,.35);
+}
+.hot i::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 0 rgba(184,149,90,.55);animation:ring 2.4s ease-out infinite}
+@keyframes ring{70%,100%{box-shadow:0 0 0 9px rgba(184,149,90,0)}}
+.hot i svg{width:14px;height:14px}
+.hot[data-side="l"] i{right:calc(100% + 6px)}
+.hot[data-side="r"] i{left:calc(100% + 6px)}
+.card:not(.front) .hot,body:not(.revealed) .hot{opacity:0;pointer-events:none}.stage.instant .card,.stage.instant .env-part{transition:none!important}
 .stage.rising .card{transition:transform 1.05s cubic-bezier(.25,.8,.25,1)}
 .stage.settling .card{transition:transform 1s cubic-bezier(.3,.7,.2,1)}
 
@@ -130,19 +149,27 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
 .btn.light{background:#fff;color:var(--ink);box-shadow:0 0 0 1px var(--line) inset}
 .btn.light:hover{box-shadow:0 0 0 1px #d4c6b0 inset}
 .btn.block{width:100%}
-.menu{
-  position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:20;
-  background:#fff;border-radius:18px;padding:6px;text-align:left;
-  box-shadow:0 18px 40px -12px rgba(50,35,15,.35),0 0 0 1px var(--line);
-  opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .2s,transform .2s;
+.sheet-bg{position:fixed;inset:0;background:rgba(40,30,20,.35);z-index:60;opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet{
+  position:fixed;left:50%;bottom:0;z-index:61;width:min(480px,100%);
+  background:#fff;border-radius:26px 26px 0 0;padding:24px 16px calc(16px + env(safe-area-inset-bottom));
+  transform:translate(-50%,105%);transition:transform .32s cubic-bezier(.2,.8,.2,1);
+  box-shadow:0 -12px 40px -10px rgba(50,35,15,.3);
 }
-.menu.open{opacity:1;transform:none;pointer-events:auto}
-.menu a,.menu button{
-  display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:12px;
+body.sheet-open .sheet{transform:translate(-50%,0)}
+body.sheet-open .sheet-bg{opacity:1;pointer-events:auto}
+.sheet .kicker,.sheet h3,.sheet-when{text-align:center}
+.sheet h3{font:500 24px/1.2 'Cormorant Garamond',serif;margin:8px 0 2px}
+.sheet-when{margin:0 0 14px;font-size:13.5px;color:var(--muted)}
+.sheet .opt{
+  display:flex;align-items:center;gap:12px;width:100%;padding:15px 14px;border-radius:14px;
   background:none;border:0;font:500 15px/1 Inter,sans-serif;color:var(--ink);text-decoration:none;cursor:pointer;
 }
-.menu a:hover,.menu button:hover{background:#f5efe5}
-.menu svg{width:18px;height:18px;color:var(--muted)}
+.sheet .opt:hover{background:#f5efe5}
+.sheet .opt svg{width:18px;height:18px;color:var(--muted)}
+.sheet .btn{margin-top:10px}
+.hot-hint{margin-top:4px!important;font-size:12.5px!important;color:var(--gold)!important}
+.ev a.dir + a.dir{margin-left:14px}
 
 .venue h2{font:500 28px/1.15 'Cormorant Garamond',serif;margin:0}
 .venue .addr{margin:6px 0 18px;font-size:14px;color:var(--muted)}
@@ -185,9 +212,24 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
     <div class="env-part env-back" id="envBack"></div>
 
     <div class="deck" id="deck">
-      <div class="card"><img src="cards/hebrew.webp" alt="Hebrew wedding invitation for Shimon and Pessel Hinda"></div>
-      <div class="card"><img src="cards/english.webp" alt="Mr. and Mrs. Mayer M. Gelbman and Mr. and Mrs. Yoel Gruber request the honour of your presence at the marriage of Shimon and Pessy, Monday November 23 2026, reception at six, chuppah at seven, The Continental, 75 Rutledge Street, Brooklyn"></div>
-      <div class="card"><img src="cards/shabbos.webp" alt="Aufruf on Shabbos Parshas Vayeitzei at 157 Harrison Avenue and Shabbos Sheva Brachos on Parshas Vayishlach at 220 Wilson Street, Brooklyn"></div>
+      <!-- hotspots are placed in % of each card image: --x/--y = top-left, --w/--h = size -->
+      <div class="card"><div class="art" style="--ar:1093/1600">
+        <img src="cards/hebrew.webp" alt="Hebrew wedding invitation for Shimon and Pessel Hinda">
+        <div class="hot" data-cal="wedding" data-side="l" style="--x:16%;--y:52.5%;--w:76%;--h:8%" role="button" tabindex="0" aria-label="Add the wedding to your calendar"><i class="i-cal"></i></div>
+        <div class="hot" data-go="wedding" data-side="l" style="--x:58%;--y:61.5%;--w:34%;--h:8%" role="button" tabindex="0" aria-label="Directions to The Continental"><i class="i-pin"></i></div>
+      </div></div>
+      <div class="card"><div class="art" style="--ar:1092/1600">
+        <img src="cards/english.webp" alt="Mr. and Mrs. Mayer M. Gelbman and Mr. and Mrs. Yoel Gruber request the honour of your presence at the marriage of Shimon and Pessy, Monday November 23 2026, reception at six, chuppah at seven, The Continental, 75 Rutledge Street, Brooklyn">
+        <div class="hot" data-cal="wedding" data-side="r" style="--x:12%;--y:51%;--w:59%;--h:9%" role="button" tabindex="0" aria-label="Add the wedding to your calendar"><i class="i-cal"></i></div>
+        <div class="hot" data-go="wedding" data-side="r" style="--x:12%;--y:79.5%;--w:42%;--h:12.5%" role="button" tabindex="0" aria-label="Directions to The Continental"><i class="i-pin"></i></div>
+      </div></div>
+      <div class="card"><div class="art" style="--ar:950/1256">
+        <img src="cards/shabbos.webp" alt="Aufruf on Shabbos Parshas Vayeitzei at 157 Harrison Avenue and Shabbos Sheva Brachos on Parshas Vayishlach at 220 Wilson Street, Brooklyn">
+        <div class="hot" data-cal="aufruf" data-side="l" style="--x:41%;--y:17%;--w:54%;--h:5%" role="button" tabindex="0" aria-label="Add the Aufruf to your calendar"><i class="i-cal"></i></div>
+        <div class="hot" data-go="aufruf" data-side="l" style="--x:50%;--y:22.7%;--w:45%;--h:16.3%" role="button" tabindex="0" aria-label="Directions to the Aufruf"><i class="i-pin"></i></div>
+        <div class="hot" data-cal="sheva" data-side="l" style="--x:40%;--y:65.7%;--w:55%;--h:5%" role="button" tabindex="0" aria-label="Add the Sheva Brachos to your calendar"><i class="i-cal"></i></div>
+        <div class="hot" data-go="sheva" data-side="l" style="--x:50%;--y:72%;--w:45%;--h:17%" role="button" tabindex="0" aria-label="Directions to the Sheva Brachos"><i class="i-pin"></i></div>
+      </div></div>
     </div>
 
     <div class="env-part pocket" id="pocket">
@@ -224,7 +266,8 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
   <div class="after">
     <div class="deck-ui">
       <div class="dots" id="dots"><span class="on"></span><span></span><span></span></div>
-      <p>Tap or swipe for next</p>
+      <p>Swipe for the next card</p>
+      <p class="hot-hint">Tap a date to save it, or an address for directions</p>
     </div>
 
     <section class="panel" style="position:relative;z-index:5">
@@ -238,7 +281,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
         <span>Chuppah 7:00 PM</span>
       </div>
       <div class="btns">
-        <button class="btn dark" id="calBtn" aria-haspopup="true" aria-expanded="false">
+        <button class="btn dark" data-cal="wedding" aria-haspopup="dialog">
           Add to Calendar
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -246,20 +289,6 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>
           Share
         </button>
-        <div class="menu" id="calMenu" role="menu">
-          <button role="menuitem" data-cal="ics">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-            Apple Calendar
-          </button>
-          <a role="menuitem" data-cal="google" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-            Google Calendar
-          </a>
-          <a role="menuitem" data-cal="outlook" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-            Outlook
-          </a>
-        </div>
       </div>
     </section>
 
@@ -270,7 +299,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
         <iframe title="Map to The Continental" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
           src="https://maps.google.com/maps?q=The%20Continental%2C%2075%20Rutledge%20St%2C%20Brooklyn%2C%20NY%2011249&z=15&output=embed"></iframe>
       </div>
-      <a class="btn dark block" data-dir="75 Rutledge St, Brooklyn, NY 11249" target="_blank" rel="noopener">
+      <a class="btn dark block" data-go="wedding" target="_blank" rel="noopener">
         Get Directions
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 3 3 10.5l7.5 3L14 21z"/></svg>
       </a>
@@ -284,8 +313,10 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
           <h3>Aufruf · Shabbos Parshas Vayeitzei</h3>
           <p class="hebv" dir="rtl" lang="he">בית המדרש נעשכיז</p>
           <p>157 Harrison Ave, Brooklyn<br>Shacharis 9:30 AM · Kiddush following, also for women</p>
-          <a class="dir" data-dir="157 Harrison Ave, Brooklyn, NY" target="_blank" rel="noopener">Directions
+          <a class="dir" data-go="aufruf" target="_blank" rel="noopener">Directions
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+          <a class="dir" data-cal="aufruf" href="#" role="button">Save date
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>
         </div>
       </div>
       <div class="ev">
@@ -294,14 +325,36 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
           <h3>Sheva Brachos · Shabbos Parshas Vayishlach</h3>
           <p class="hebv" dir="rtl" lang="he">אולם כתר צבי</p>
           <p>220 Wilson St, Brooklyn</p>
-          <a class="dir" data-dir="220 Wilson St, Brooklyn, NY" target="_blank" rel="noopener">Directions
+          <a class="dir" data-go="sheva" target="_blank" rel="noopener">Directions
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+          <a class="dir" data-cal="sheva" href="#" role="button">Save date
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>
         </div>
       </div>
     </section>
   </div>
 </main>
 <div class="toast" id="toast"></div>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <p class="kicker">Add to calendar</p>
+  <h3 id="sheetTitle"></h3>
+  <p class="sheet-when" id="sheetWhen"></p>
+  <button class="opt" id="optIcs">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    Apple Calendar
+  </button>
+  <a class="opt" id="optGoogle" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    Google Calendar
+  </a>
+  <a class="opt" id="optOutlook" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    Outlook
+  </a>
+  <button class="btn light block" id="sheetClose">Cancel</button>
+</div>
 
 <script>
 (() => {
@@ -359,6 +412,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
   function render() {
     order.forEach((ci, rank) => {
       cards[ci].style.zIndex = 10 - rank;
+      cards[ci].classList.toggle('front', rank === 0);
       apply(cards[ci], pos(rank));
     });
     dots.forEach((d, i) => d.classList.toggle('on', i === order[0]));
@@ -414,7 +468,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
     if (phase === 'closed') { open(); return; }
     if (phase !== 'free' || busy) return;
     const c = cards[order[0]];
-    drag = { x0: e.clientX, dx: 0, c, id: e.pointerId };
+    drag = { x0: e.clientX, dx: 0, c, id: e.pointerId, hot: e.target.closest('.hot') };
     c.style.transition = 'none';
   });
   stage.addEventListener('pointermove', e => {
@@ -427,17 +481,22 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
   });
   function endDrag(e, cancelled) {
     if (!drag || e.pointerId !== drag.id) return;
-    const { dx, c } = drag;
+    const { dx, c, hot } = drag;
     drag = null;
     c.style.transition = '';
     if (!cancelled && Math.abs(dx) > 60) next(Math.sign(dx));
+    else if (!cancelled && Math.abs(dx) < 6 && hot) { render(); hotAction(hot); }
     else if (!cancelled && Math.abs(dx) < 6) next(-1);
     else render();
   }
   stage.addEventListener('pointerup', e => endDrag(e, false));
   stage.addEventListener('pointercancel', e => endDrag(e, true));
   stage.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); phase === 'closed' ? open() : next(-1); }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const hot = e.target.closest('.hot');
+      if (hot) hotAction(hot); else phase === 'closed' ? open() : next(-1);
+    }
     if (phase === 'free' && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) next(e.key === 'ArrowRight' ? 1 : -1);
   });
 
@@ -447,62 +506,118 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,8.4
   Promise.all(cards.map(c => c.querySelector('img').decode().catch(() => {})))
     .then(() => wait(1100)).then(open);
 
-  // ---------- calendar ----------
-  const EVENT = {
-    title: 'Gelbman Gruber Wedding',
-    start: '20261123T230000Z',          // 6:00 PM EST
-    end: '20261124T040000Z',            // 11:00 PM EST
-    location: 'The Continental, 75 Rutledge St, Brooklyn, NY 11249',
-    details: 'Shimon & Pessy\nReception 6:00 PM · Chuppah 7:00 PM\n\n' + location.href.split('#')[0]
+  // ---------- events: calendar + directions ----------
+  const pageUrl = location.href.split('#')[0];
+  const EVENTS = {
+    wedding: {
+      title: 'Gelbman Gruber Wedding',
+      when: 'Monday, November 23, 2026 · 6:00 PM',
+      start: '20261123T230000Z', end: '20261124T040000Z',            // 6–11 PM EST
+      startLocal: '2026-11-23T18:00:00-05:00', endLocal: '2026-11-23T23:00:00-05:00',
+      location: 'The Continental, 75 Rutledge St, Brooklyn, NY 11249',
+      address: '75 Rutledge St, Brooklyn, NY 11249',
+      details: 'Shimon & Pessy\nReception 6:00 PM · Chuppah 7:00 PM'
+    },
+    aufruf: {
+      title: 'Aufruf · Shimon Gelbman',
+      when: 'Shabbos Parshas Vayeitzei · November 21, 2026 · 9:30 AM',
+      start: '20261121T143000Z', end: '20261121T173000Z',            // 9:30 AM–12:30 PM EST
+      startLocal: '2026-11-21T09:30:00-05:00', endLocal: '2026-11-21T12:30:00-05:00',
+      location: 'בית המדרש נעשכיז, 157 Harrison Ave, Brooklyn, NY',
+      address: '157 Harrison Ave, Brooklyn, NY',
+      details: 'Shacharis 9:30 AM · Kiddush following, also for women'
+    },
+    sheva: {
+      title: 'Sheva Brachos · Shimon & Pessy',
+      when: 'Shabbos Parshas Vayishlach · November 28, 2026',
+      day: '20261128', dayEnd: '20261129',                           // all-day
+      location: 'אולם כתר צבי, 220 Wilson St, Brooklyn, NY',
+      address: '220 Wilson St, Brooklyn, NY',
+      details: 'Shabbos Sheva Brachos'
+    }
   };
   const enc = encodeURIComponent;
-  $('[data-cal="google"]').href =
-    `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${enc(EVENT.title)}&dates=${EVENT.start}/${EVENT.end}&details=${enc(EVENT.details)}&location=${enc(EVENT.location)}`;
-  $('[data-cal="outlook"]').href =
-    `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${enc(EVENT.title)}&startdt=2026-11-23T18:00:00-05:00&enddt=2026-11-23T23:00:00-05:00&location=${enc(EVENT.location)}&body=${enc(EVENT.details)}`;
-  $('[data-cal="ics"]').addEventListener('click', () => {
+  const describe = ev => ev.details + '\n\n' + pageUrl;
+
+  function googleUrl(ev) {
+    const dates = ev.day ? `${ev.day}/${ev.dayEnd}` : `${ev.start}/${ev.end}`;
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${enc(ev.title)}&dates=${dates}&details=${enc(describe(ev))}&location=${enc(ev.location)}`;
+  }
+  function outlookUrl(ev) {
+    const span = ev.day
+      ? `startdt=${ev.day.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')}&enddt=${ev.dayEnd.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3')}&allday=true`
+      : `startdt=${enc(ev.startLocal)}&enddt=${enc(ev.endLocal)}`;
+    return `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${enc(ev.title)}&${span}&location=${enc(ev.location)}&body=${enc(describe(ev))}`;
+  }
+  function downloadIcs(key) {
+    const ev = EVENTS[key];
     const esc = s => s.replace(/[\\,;]/g, m => '\\' + m).replace(/\n/g, '\\n');
     const ics = [
       'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Gelbman Gruber Wedding//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
       'BEGIN:VEVENT',
-      'UID:gelbman-gruber-wedding-20261123',
+      `UID:gelbman-gruber-${key}-2026`,
       'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''),
-      'DTSTART:' + EVENT.start, 'DTEND:' + EVENT.end,
-      'SUMMARY:' + esc(EVENT.title),
-      'LOCATION:' + esc(EVENT.location),
-      'DESCRIPTION:' + esc(EVENT.details),
-      'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Gelbman Gruber Wedding tomorrow', 'END:VALARM',
+      ...(ev.day ? ['DTSTART;VALUE=DATE:' + ev.day, 'DTEND;VALUE=DATE:' + ev.dayEnd] : ['DTSTART:' + ev.start, 'DTEND:' + ev.end]),
+      'SUMMARY:' + esc(ev.title),
+      'LOCATION:' + esc(ev.location),
+      'DESCRIPTION:' + esc(describe(ev)),
+      'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc(ev.title) + ' tomorrow', 'END:VALARM',
       'END:VEVENT', 'END:VCALENDAR'
     ].join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
-    a.download = 'gelbman-gruber-wedding.ics';
+    a.download = `gelbman-gruber-${key}.ics`;
     document.body.appendChild(a); a.click(); a.remove();
-    closeMenu();
-  });
+  }
 
-  const calBtn = $('#calBtn'), calMenu = $('#calMenu');
-  const closeMenu = () => { calMenu.classList.remove('open'); calBtn.setAttribute('aria-expanded', 'false'); };
-  calBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    const isOpen = calMenu.classList.toggle('open');
-    calBtn.setAttribute('aria-expanded', String(isOpen));
-  });
-  calMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
-  document.addEventListener('click', e => { if (!calMenu.contains(e.target)) closeMenu(); });
+  // bottom sheet with calendar choices for one event
+  let sheetKey = null;
+  function openSheet(key) {
+    const ev = EVENTS[key];
+    sheetKey = key;
+    $('#sheetTitle').textContent = ev.title;
+    $('#sheetWhen').textContent = ev.when;
+    $('#optGoogle').href = googleUrl(ev);
+    $('#optOutlook').href = outlookUrl(ev);
+    document.body.classList.add('sheet-open');
+  }
+  const closeSheet = () => document.body.classList.remove('sheet-open');
+  $('#optIcs').addEventListener('click', () => { downloadIcs(sheetKey); closeSheet(); });
+  $('#optGoogle').addEventListener('click', closeSheet);
+  $('#optOutlook').addEventListener('click', closeSheet);
+  $('#sheetClose').addEventListener('click', closeSheet);
+  $('#sheetBg').addEventListener('click', closeSheet);
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
-  // ---------- directions ----------
   const isApple = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  document.querySelectorAll('[data-dir]').forEach(a => {
-    const q = enc(a.dataset.dir);
-    a.href = isApple ? `https://maps.apple.com/?daddr=${q}` : `https://www.google.com/maps/dir/?api=1&destination=${q}`;
-  });
+  const directionsUrl = key => {
+    const q = enc(EVENTS[key].address);
+    return isApple ? `https://maps.apple.com/?daddr=${q}` : `https://www.google.com/maps/dir/?api=1&destination=${q}`;
+  };
+
+  // links and buttons outside the cards
+  document.querySelectorAll('a[data-go]').forEach(a => a.href = directionsUrl(a.dataset.go));
+  document.querySelectorAll('[data-cal]:not(.hot)').forEach(el => el.addEventListener('click', e => {
+    e.preventDefault();
+    openSheet(el.dataset.cal);
+  }));
+
+  // spots on the cards (taps arrive through the deck's pointer handling)
+  function hotAction(hot) {
+    if (hot.dataset.cal) openSheet(hot.dataset.cal);
+    else if (!window.open(directionsUrl(hot.dataset.go), '_blank')) location.href = directionsUrl(hot.dataset.go);
+  }
+  const ICONS = {
+    'i-cal': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    'i-pin': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>'
+  };
+  document.querySelectorAll('.hot i').forEach(i => i.innerHTML = ICONS[i.className]);
 
   // ---------- share ----------
   const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); };
   $('#shareBtn').addEventListener('click', async () => {
-    const data = { title: EVENT.title, text: 'Shimon & Pessy · Monday, November 23, 2026', url: location.href.split('#')[0] };
+    const data = { title: EVENTS.wedding.title, text: 'Shimon & Pessy · Monday, November 23, 2026', url: pageUrl };
     if (navigator.share) { try { await navigator.share(data); } catch {} return; }
     try { await navigator.clipboard.writeText(data.url); toast('Link copied'); } catch { toast(data.url); }
   });
